@@ -13,13 +13,15 @@ public class ApiClient {
             throws IOException, InterruptedException {
 
         HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         HttpResponse<String> response = client
                 .send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() == HttpStatus.NOT_FOUND.value()) {
+            System.out.println("Failing APIs");
+            System.out.println(request.toString());
             throw new ResourceNotFoundException("Resource not found. Please try again");
         }
+        System.out.println(request.toString());
         return response.body();
     }
 }
