@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.klasha.test.config.ConcurrencyConfig;
 import com.klasha.test.controller.request.GetCountryDataRequest;
 import com.klasha.test.controller.request.GetTopCitiesRequest;
+import com.klasha.test.countriesApi.entity.CurrencyConversion;
 import com.klasha.test.countriesApi.entity.CityWithPopulation;
 import com.klasha.test.countriesApi.entity.Country;
 import com.klasha.test.countriesApi.entity.CountryState;
@@ -14,12 +15,17 @@ import com.klasha.test.countriesApi.entity.CountryStatesAndCities;
 import com.klasha.test.countriesApi.entity.Location;
 import com.klasha.test.countriesApi.response.FilteredCitiesWithPopulation;
 import com.klasha.test.enums.CountryTask;
+import com.klasha.test.exception.types.CurrencyConversionNotSupported;
 import com.klasha.test.exception.types.InternalServerErrorException;
+import com.klasha.test.exception.types.SameCurrencyNotSupportedException;
+import com.klasha.test.repository.RatesRepository;
 import com.klasha.test.util.ApiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -40,6 +46,8 @@ public class CountriesApiService {
     private final String BASE_URL = "https://countriesnow.space/api/v0.1/countries";
 
     private final ConcurrencyConfig concurrencyConfig;
+
+    private final RatesRepository ratesRepository;
 
     private final Gson gson = new Gson();
 
@@ -105,6 +113,57 @@ public class CountriesApiService {
                 .name(country)
                 .states(result)
                 .build();
+    }
+
+    public CurrencyConversion convertCurrency(String country, double amount, String targetCurrency) {
+        String fromCurrency = getCountryCurrency(country);
+        if (fromCurrency.equalsIgnoreCase(targetCurrency)) {
+            throw new SameCurrencyNotSupportedException("Please input a different target currency");
+        }
+
+        var conversion =  ratesRepository.availableExchanges().stream()
+                .filter(v -> v.get(0).equalsIgnoreCase(fromCurrency)
+                        && v.get(1).equalsIgnoreCase(targetCurrency)).findFirst();
+        if (conversion.isEmpty()) {
+            throw new CurrencyConversionNotSupported(fromCurrency + " to " + targetCurrency + " not supported at this time");
+        }
+
+        List<String> conversionParams = conversion.get();
+
+        var amountBD = new BigDecimal(amount);
+        var rate = Double.parseDouble(conversionParams.get(2));
+        var rateBD = new BigDecimal(rate);
+        var convertedAmountBD = amountBD.multiply(rateBD);
+
+        return CurrencyConversion.builder()
+                .amount(amountBD.setScale(2, RoundingMode.HALF_EVEN))
+                .fromCurrency(fromCurrency)
+                .toCurrency(targetCurrency)
+                .rate(rate)
+                .convertedAmount(convertedAmountBD
+                        .setScale(2, RoundingMode.HALF_EVEN))
+                .build();
+    }
+
+    private String getCountryCurrency(String country) {
+        String response;
+        try {
+            String encodedCountry = URLEncoder.encode(country, StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(BASE_URL + "/currency/q?" + "country="
+                            + encodedCountry))
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+            response = ApiClient.makeRequest(request);
+        } catch (URISyntaxException | InterruptedException | IOException e) {
+            throw new InternalServerErrorException("Unable to process request. Please try again");
+        }
+
+        JsonObject object = gson.fromJson(response, JsonObject.class);
+        JsonObject data = object.getAsJsonObject("data");
+
+        return data.get("currency").getAsString();
     }
 
     private String getStateCities(String country, String state) {
