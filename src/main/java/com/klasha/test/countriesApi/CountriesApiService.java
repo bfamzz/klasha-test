@@ -5,9 +5,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.klasha.test.config.ConcurrencyConfig;
+import com.klasha.test.controller.request.GetCountryDataRequest;
 import com.klasha.test.countriesApi.entity.CityWithPopulation;
-import com.klasha.test.countriesApi.request.GetTopCitiesRequest;
+import com.klasha.test.countriesApi.entity.Country;
+import com.klasha.test.countriesApi.entity.Location;
+import com.klasha.test.controller.request.GetTopCitiesRequest;
 import com.klasha.test.countriesApi.response.FilteredCitiesWithPopulation;
+import com.klasha.test.enums.CountryTask;
 import com.klasha.test.exception.types.InternalServerErrorException;
 import com.klasha.test.util.ApiClient;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +23,9 @@ import java.net.URISyntaxException;
 import java.net.http.HttpRequest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -34,7 +40,6 @@ public class CountriesApiService {
     private final Gson gson = new Gson();
 
     public List<FilteredCitiesWithPopulation> getTopCities(GetTopCitiesRequest requestBody, int limit)
-            throws URISyntaxException, IOException, InterruptedException
     {
         String[] countries = {"Italy", "New Zealand", "Ghana"};
         return Arrays.stream(countries).map(c -> CompletableFuture.supplyAsync(() -> {
@@ -47,6 +52,74 @@ public class CountriesApiService {
                 throw new InternalServerErrorException("Unable to get data. Please try again!");
             }
         }, concurrencyConfig.getThreadPool())).toList().stream().map(CompletableFuture::join).collect(Collectors.toList());
+    }
+
+    public Country getCountryData(GetCountryDataRequest requestBody) {
+        Country country = Country.builder()
+                .name(requestBody.getCountry())
+                .build();
+
+        Map<CountryTask, String> taskMappings = new HashMap<>();
+        taskMappings.put(CountryTask.POPULATION, BASE_URL + "/population");
+        taskMappings.put(CountryTask.CAPITAL_CITY_ISO2_ISO3, BASE_URL + "/capital");
+        taskMappings.put(CountryTask.LOCATION, BASE_URL + "/positions");
+        taskMappings.put(CountryTask.CURRENCY, BASE_URL + "/currency");
+
+        taskMappings.entrySet().stream().map(s -> CompletableFuture.runAsync(() -> {
+            try {
+                getCountryDataPrivate(country, requestBody, s.getValue(), s.getKey());
+            } catch (URISyntaxException | IOException | InterruptedException e) {
+                throw new InternalServerErrorException("Unable to process request. Please try again");
+            }
+        }, concurrencyConfig.getThreadPool())).toList().stream().map(CompletableFuture::join).collect(Collectors.toList());
+        return country;
+    }
+
+    private void getCountryDataPrivate(Country country, GetCountryDataRequest requestBody, String url, CountryTask task)
+            throws URISyntaxException, IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI(url))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
+                .build();
+        String response = ApiClient.makeRequest(request);
+        processCountryTaskResult(country, task, response);
+    }
+
+    private void processCountryTaskResult(Country country, CountryTask task, String response) {
+        JsonObject object = gson.fromJson(response, JsonObject.class);
+        JsonObject data = object.getAsJsonObject("data");
+
+        switch (task) {
+            case POPULATION -> {
+                JsonArray populationCounts = data.
+                        getAsJsonArray("populationCounts");
+                JsonElement e = populationCounts.get(populationCounts.size() - 1);
+                int latestPopulationData = e.getAsJsonObject()
+                        .get("value")
+                        .getAsInt();
+                country.setPopulation(latestPopulationData);
+            }
+            case CAPITAL_CITY_ISO2_ISO3 -> {
+                String capitalCity = data.get("capital")
+                        .getAsString();
+                String iso2 = data.get("iso2")
+                        .getAsString();
+                String iso3 = data.get("iso3")
+                        .getAsString();
+                country.setCapitalCity(capitalCity);
+                country.setIso2(iso2);
+                country.setIso3(iso3);
+            }
+            case LOCATION -> {
+                Location location = gson.fromJson(data, Location.class);
+                country.setLocation(location);
+            }
+            case CURRENCY -> {
+                String currency = data.get("currency").getAsString();
+                country.setCurrency(currency);
+            }
+        }
     }
 
     private FilteredCitiesWithPopulation getTopCitiesTask(GetTopCitiesRequest requestBody)

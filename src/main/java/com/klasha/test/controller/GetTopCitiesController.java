@@ -1,10 +1,11 @@
-package com.klasha.test.controller.getTopCities;
+package com.klasha.test.controller;
 
+import com.klasha.test.controller.request.GetTopCitiesRequest;
 import com.klasha.test.controller.response.GetTopCitiesResponse;
 import com.klasha.test.countriesApi.CountriesApiService;
-import com.klasha.test.countriesApi.request.GetTopCitiesRequest;
 import com.klasha.test.countriesApi.response.FilteredCitiesWithPopulation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 @RestController
@@ -27,16 +26,12 @@ public class GetTopCitiesController {
         this.countriesApiService = countriesApiService;
     }
 
-    @PostMapping(path = "/topCities")
+    @PostMapping(path = "/topCities", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GetTopCitiesResponse> getTopCities(@RequestBody GetTopCitiesRequest request,
                                                              @RequestParam(name = "number_of_cities") int numberOfCities) {
-        List<FilteredCitiesWithPopulation> result;
-        try {
-            result = countriesApiService.getTopCities(request, numberOfCities);
-        } catch (IOException | InterruptedException | URISyntaxException e) {
-            return ResponseEntity.internalServerError().build();
-        }
-
+        List<FilteredCitiesWithPopulation> result = countriesApiService
+                .getTopCities(request, numberOfCities);;
         return ResponseEntity.ok(GetTopCitiesResponse.builder()
                 .data(result)
                 .build());
