@@ -24,7 +24,7 @@ http://localhost:8080/api/v1/convertCurrency                                [GET
 __countryTopCities (default countries are: Italy, New Zealand & Ghana)__
 
 ```sh
-http://localhost:8080/api/v1/countryTopCities                            [GET]
+http://localhost:8080/api/v1/countryTopCities                       [GET]
 
 Query parameters:
   - number_of_cities [integer]
@@ -33,7 +33,7 @@ Query parameters:
 __country data (population, capital city, etc.)__
 
 ```sh
-http://localhost:8080/api/v1/countryData                            [POST]
+http://localhost:8080/api/v1/countryData                            [GET]
 
 Query parameters:
   - country [string]
@@ -42,7 +42,7 @@ Query parameters:
 __country states and cities__
 
 ```sh
-http://localhost:8080/api/v1/countryStatesAndCities                            [POST]
+http://localhost:8080/api/v1/countryStatesAndCities                 [GET]
 
 Query parameters:
   - country [string]
@@ -51,7 +51,7 @@ Query parameters:
 __convert currency__
 
 ```sh
-http://localhost:8080/api/v1/convertCurrency                            [GET]
+http://localhost:8080/api/v1/convertCurrency                         [GET]
 
 Query parameters:
   - country           [string]
