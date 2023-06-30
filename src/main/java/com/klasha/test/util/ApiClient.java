@@ -10,7 +10,7 @@ public class ApiClient {
             throws IOException, InterruptedException {
 
         HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
+//                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         HttpResponse<String> response = client
                 .send(request, HttpResponse.BodyHandlers.ofString());

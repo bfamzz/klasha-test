@@ -4,10 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.klasha.test.ConcurrencyConfig;
+import com.klasha.test.config.ConcurrencyConfig;
 import com.klasha.test.countriesApi.entity.CityWithPopulation;
 import com.klasha.test.countriesApi.request.GetTopCitiesRequest;
 import com.klasha.test.countriesApi.response.FilteredCitiesWithPopulation;
+import com.klasha.test.exception.types.InternalServerErrorException;
 import com.klasha.test.util.ApiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -42,8 +43,8 @@ public class CountriesApiService {
                 iRequest.setCountry(c);
                 iRequest.setLimit(limit);
                 return getTopCitiesTask(iRequest);
-            } catch (URISyntaxException | IOException | InterruptedException | CloneNotSupportedException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new InternalServerErrorException("Unable to get data. Please try again!");
             }
         }, concurrencyConfig.getThreadPool())).toList().stream().map(CompletableFuture::join).collect(Collectors.toList());
     }
@@ -56,7 +57,6 @@ public class CountriesApiService {
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
                 .build();
         String response = ApiClient.makeRequest(request);
-        System.out.println(response);
         JsonObject object = gson.fromJson(response, JsonObject.class);
         JsonArray data = object.getAsJsonArray("data");
 
