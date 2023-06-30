@@ -2,6 +2,7 @@ package com.klasha.test.exception;
 
 import com.klasha.test.exception.types.CurrencyConversionNotSupported;
 import com.klasha.test.exception.types.InternalServerErrorException;
+import com.klasha.test.exception.types.InvalidAmountException;
 import com.klasha.test.exception.types.ResourceNotFoundException;
 import com.klasha.test.exception.types.SameCurrencyNotSupportedException;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(value = CurrencyConversionNotSupported.class)
     public ResponseEntity<Object> handleApiRequestException(CurrencyConversionNotSupported exception) {
+        ApiException apiException = new ApiException(exception.getMessage(), exception,
+                ZonedDateTime.now());
+        return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(value = InvalidAmountException.class)
+    public ResponseEntity<Object> handleApiRequestException(InvalidAmountException exception) {
         ApiException apiException = new ApiException(exception.getMessage(), exception,
                 ZonedDateTime.now());
         return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
