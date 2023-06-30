@@ -1,4 +1,4 @@
-package com.klasha.test.countriesApi.request;
+package com.klasha.test.controller.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
