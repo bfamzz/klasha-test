@@ -1,0 +1,88 @@
+springdoc:
+  swagger-ui:
+    path: /klasha-api/swagger-ui.html
+  packages-to-scan: com.klasha.test
+  paths-to-match: /**
+
+api:
+  common:
+    version: 1.0.0
+    title: Klasha Backend APIs
+    description: APIs to get country data (population, cities, etc.) and convert currency
+    termsOfService: APIs are to be used as is. No warranty.
+    license: MIT licence
+    licenseUrl: https://github.com/bfamzz/klasha-test/LICENSE.md
+    externalDocDesc: APIs to get country data (population, cities, etc.) and convert currency
+    externalDocUrl: https://www.klasha-test.com
+    contact:
+      name: Busayo Famutimi
+      url: https://github.com/bfamzz/klasha-test
+      email: famutimi.busayo@gmail.com
+
+  responseCodes:
+    ok:
+      description: OK
+    badRequest:
+      description: Bad Request, invalid format of the request. See response message for more information
+    notFound:
+      description: Not found, the specified id does not exist
+
+  getTopCities:
+    description: Get top (number_of_cities) cities in Italy, New Zealand & Ghana
+    notes: |
+      # Successful response
+      Gets the top (number_of_cities) cities in Italy, New Zealand & Ghana if query parameter (number_of_cities) is provided
+
+      # Error response
+      If query parameter (number_of_cities) is missing
+
+      ## Valid query parameter - Success
+      200 - Ok
+
+      ## Query parameter not provided - Error
+      400 - A **Bad Request** error will be returned
+
+  getCountryStatesAndCities:
+    description: Get states and cities in a country
+    notes: |
+      # Successful response
+      Gets all states and cities in a country if valid country name is provided
+
+      # Error response
+      If query parameter (country) is missing or invalid
+
+      ## Valid query parameter - Success
+      200 - Ok
+
+      ## Query parameter not provided or invalid - Error
+      400 - A **Bad Request** error will be returned
+
+  getCountryData:
+    description: Get country data
+    notes: |
+      # Successful response
+      Gets country data if valid country name is provided
+
+      # Error response
+      If query parameter (country) is missing or invalid
+
+      ## Valid query parameter - Success
+      200 - Ok
+
+      ## Query parameter not provided or invalid - Error
+      400 - A **Bad Request** error will be returned
+
+  convertCurrency:
+    description: Convert currency between supported currencies
+    notes: |
+      # Successful response
+      Convert currency if all input parameters (sourceCountry, amount and targetCurrency) are provided and valid
+
+      # Error response
+      If required parameters are missing or invalid
+
+      ## Valid query parameter - Success
+      200 - Ok
+
+      ## Query parameter not provided or invalid - Error
+      400 - A **Bad Request** error will be returned

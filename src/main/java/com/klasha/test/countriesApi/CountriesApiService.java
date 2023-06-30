@@ -5,20 +5,19 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.klasha.test.config.ConcurrencyConfig;
-import com.klasha.test.controller.request.GetCountryDataRequest;
-import com.klasha.test.controller.request.GetTopCitiesRequest;
-import com.klasha.test.countriesApi.entity.CurrencyConversion;
 import com.klasha.test.countriesApi.entity.CityWithPopulation;
 import com.klasha.test.countriesApi.entity.Country;
 import com.klasha.test.countriesApi.entity.CountryState;
 import com.klasha.test.countriesApi.entity.CountryStatesAndCities;
+import com.klasha.test.countriesApi.entity.CurrencyConversion;
 import com.klasha.test.countriesApi.entity.Location;
 import com.klasha.test.countriesApi.response.FilteredCitiesWithPopulation;
 import com.klasha.test.enums.CountryTask;
 import com.klasha.test.exception.types.CurrencyConversionNotSupported;
 import com.klasha.test.exception.types.InternalServerErrorException;
+import com.klasha.test.exception.types.InvalidAmountException;
 import com.klasha.test.exception.types.SameCurrencyNotSupportedException;
-import com.klasha.test.repository.RatesRepository;
+import com.klasha.test.repository.CsvRatesRepository;
 import com.klasha.test.util.ApiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,39 +46,41 @@ public class CountriesApiService {
 
     private final ConcurrencyConfig concurrencyConfig;
 
-    private final RatesRepository ratesRepository;
+    private final CsvRatesRepository csvRatesRepository;
 
     private final Gson gson = new Gson();
 
-    public List<FilteredCitiesWithPopulation> getTopCities(GetTopCitiesRequest requestBody, int limit)
+    public List<FilteredCitiesWithPopulation> getTopCities(int limit)
     {
         String[] countries = {"Italy", "New Zealand", "Ghana"};
         return Arrays.stream(countries).map(c -> CompletableFuture.supplyAsync(() -> {
             try {
-                var iRequest = (GetTopCitiesRequest) requestBody.cloneObj();
-                iRequest.setCountry(c);
-                iRequest.setLimit(limit);
-                return getTopCitiesTask(iRequest);
+                return getTopCitiesTask(c, limit);
             } catch (Exception e) {
                 throw new InternalServerErrorException("Unable to get data. Please try again!");
             }
         }, concurrencyConfig.getThreadPool())).toList().stream().map(CompletableFuture::join).collect(Collectors.toList());
     }
 
-    public Country getCountryData(GetCountryDataRequest requestBody) {
+    public Country getCountryData(String countryName) {
+        String encodedCountry = URLEncoder.encode(countryName, StandardCharsets.UTF_8);
         Country country = Country.builder()
-                .name(requestBody.getCountry())
+                .name(encodedCountry)
                 .build();
 
         Map<CountryTask, String> taskMappings = new HashMap<>();
-        taskMappings.put(CountryTask.POPULATION, BASE_URL + "/population");
-        taskMappings.put(CountryTask.CAPITAL_CITY_ISO2_ISO3, BASE_URL + "/capital");
-        taskMappings.put(CountryTask.LOCATION, BASE_URL + "/positions");
-        taskMappings.put(CountryTask.CURRENCY, BASE_URL + "/currency");
+        taskMappings.put(CountryTask.POPULATION,
+                BASE_URL + "/population/q?country=" + encodedCountry);
+        taskMappings.put(CountryTask.CAPITAL_CITY_ISO2_ISO3,
+                BASE_URL + "/capital/q?country=" + encodedCountry);
+        taskMappings.put(CountryTask.LOCATION,
+                BASE_URL + "/positions/q?country=" + encodedCountry);
+        taskMappings.put(CountryTask.CURRENCY,
+                BASE_URL + "/currency/q?country=" + encodedCountry);
 
         taskMappings.entrySet().stream().map(s -> CompletableFuture.runAsync(() -> {
             try {
-                getCountryDataPrivate(country, requestBody, s.getValue(), s.getKey());
+                getCountryDataPrivate(country, s.getValue(), s.getKey());
             } catch (URISyntaxException | IOException | InterruptedException e) {
                 throw new InternalServerErrorException("Unable to process request. Please try again");
             }
@@ -116,16 +117,20 @@ public class CountriesApiService {
     }
 
     public CurrencyConversion convertCurrency(String country, double amount, String targetCurrency) {
+        if (amount <= 0.0) {
+            throw new InvalidAmountException("Amount must be greater than 0.0");
+        }
         String fromCurrency = getCountryCurrency(country);
         if (fromCurrency.equalsIgnoreCase(targetCurrency)) {
             throw new SameCurrencyNotSupportedException("Please input a different target currency");
         }
 
-        var conversion =  ratesRepository.availableExchanges().stream()
+        var conversion =  csvRatesRepository.availableExchanges().stream()
                 .filter(v -> v.get(0).equalsIgnoreCase(fromCurrency)
                         && v.get(1).equalsIgnoreCase(targetCurrency)).findFirst();
         if (conversion.isEmpty()) {
-            throw new CurrencyConversionNotSupported(fromCurrency + " to " + targetCurrency + " not supported at this time");
+            throw new CurrencyConversionNotSupported(fromCurrency + " to "
+                    + targetCurrency + " not supported at this time");
         }
 
         List<String> conversionParams = conversion.get();
@@ -200,12 +205,12 @@ public class CountriesApiService {
         }
     }
 
-    private void getCountryDataPrivate(Country country, GetCountryDataRequest requestBody, String url, CountryTask task)
+    private void getCountryDataPrivate(Country country, String url, CountryTask task)
             throws URISyntaxException, IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(new URI(url))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
+                .GET()
                 .build();
         String response = ApiClient.makeRequest(request);
         processCountryTaskResult(country, task, response);
@@ -247,12 +252,15 @@ public class CountriesApiService {
         }
     }
 
-    private FilteredCitiesWithPopulation getTopCitiesTask(GetTopCitiesRequest requestBody)
+    private FilteredCitiesWithPopulation getTopCitiesTask(String country, int limit)
             throws URISyntaxException, IOException, InterruptedException {
+        String encodedCountry = URLEncoder.encode(country, StandardCharsets.UTF_8);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI(BASE_URL + "/population/cities/filter"))
+                .uri(new URI(BASE_URL
+                        + "/population/cities/filter/q?country=" + encodedCountry
+                        + "&limit=" + limit + "&order=desc&orderBy=population"))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
+                .GET()
                 .build();
         String response = ApiClient.makeRequest(request);
         JsonObject object = gson.fromJson(response, JsonObject.class);
@@ -264,7 +272,7 @@ public class CountriesApiService {
             subResult.add(item);
         }
         return FilteredCitiesWithPopulation.builder()
-                .country(requestBody.getCountry())
+                .country(country)
                 .citiesWithPopulation(subResult)
                 .build();
     }

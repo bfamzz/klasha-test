@@ -11,7 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Repository
-public class RatesRepository {
+public class CsvRatesRepository {
 
     @Bean
     public List<List<String>> availableExchanges() {
