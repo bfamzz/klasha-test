@@ -130,7 +130,7 @@ public class CountriesApiService {
                         && v.get(1).equalsIgnoreCase(targetCurrency)).findFirst();
         if (conversion.isEmpty()) {
             throw new CurrencyConversionNotSupported(fromCurrency + " to "
-                    + targetCurrency + " not supported at this time");
+                    + targetCurrency + " is not supported at this time");
         }
 
         List<String> conversionParams = conversion.get();
