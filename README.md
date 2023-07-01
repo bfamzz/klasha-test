@@ -3,11 +3,16 @@
 - Spring Boot
 - Docker
 
-## Installation / How to run
+## How to run
 - Clone the project files
 - At the root of the project directory run the following command:
 ```shell
 ./mvnw spring-boot:run
+```
+
+## How to run (with Docker)
+```shell
+docker run --name klasha-test -p 8080:8080 -it bfamz/klasha-test:latest
 ```
 
 ## Swagger-ui Documentation
@@ -58,3 +63,13 @@ Query parameters:
   - amount            [double]
   - targetCurrency    [string]
 ```
+
+## Observation
+* There is a failing case from the external API for getting the cities in `Lagos State, Nigeria`. The input to the endpoint is an output from another endpoint. Additional parsing/formatting was required to make the failing case pass.
+
+
+* The external API has backward compatibility. However, the new API endpoint should be clearly stated in the documentation for new services dependent on the API as not all http clients are configured to follow redirects.
+
+## Recommendation
+* Caching - The results should be cached in an in-memory datastore (e.g. Redis) so that subsequent calls to the endpoint will result in faster response time.
+* 
