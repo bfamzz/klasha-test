@@ -8,14 +8,20 @@
         <version>3.1.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>com.klasha</groupId>
     <artifactId>test</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>klasha-test</name>
     <description>klasha-test</description>
+
     <properties>
-        <java.version>17</java.version>
+        <java.version>19</java.version>
+        <image>DOCKER_HUB_USERNAME_FROM_ENV_VAR/${project.name}:${project.version}</image>
+        <username>DOCKER_HUB_USERNAME_FROM_ENV_VAR</username>
+        <password>DOCKER_HUB_PASSWORD_FROM_ENV_VAR</password>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -58,6 +64,44 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <from>
+                        <image>eclipse-temurin:19@sha256:5682730f2f3ea0485f4e63d8ba01a36fc21caf63201809af024838630da7770c</image>
+                        <platforms>
+                            <platform>
+                                <architecture>amd64</architecture>
+                                <os>linux</os>
+                            </platform>
+                        </platforms>
+                    </from>
+                    <to>
+                        <auth>
+                            <username>${username}</username>
+                            <password>${password}</password>
+                        </auth>
+                        <tags>
+                            <tag>latest</tag>
+                        </tags>
+                    </to>
+                    <container>
+                        <ports>
+                            <port>8080</port>
+                        </ports>
+                    </container>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
