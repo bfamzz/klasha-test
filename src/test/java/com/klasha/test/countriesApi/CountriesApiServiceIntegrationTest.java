@@ -101,7 +101,31 @@ public class CountriesApiServiceIntegrationTest {
     }
 
     @Test
-    void itShouldNotGetCountryData() throws Exception {
+    void itShouldNotGetCountryDataBecauseOfEmptyCountryName() throws Exception {
+        // Given
+        String country = "";
+        ResultActions getCountryDataActions = mockMvc.perform(
+                MockMvcRequestBuilders
+                        .get("/api/v1/countryData?country="
+                                + country)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
+
+        // When
+        // Then
+        getCountryDataActions.andExpect(status().isBadRequest());
+        MvcResult result = getCountryDataActions.andReturn();
+        String resultString = result.getResponse().getContentAsString();
+
+        JsonObject obj = gson.fromJson(resultString, JsonObject.class);
+        assertThat(obj.has("message")).isTrue();
+
+        assertThat(obj.get("message").getAsString())
+                .isEqualTo("Provide a valid country name");
+    }
+
+    @Test
+    void itShouldNotGetCountryDataBecauseOfInvalidCountryName() throws Exception {
         // Given
         String country = "Ghanaa";
         ResultActions getCountryDataActions = mockMvc.perform(
@@ -299,5 +323,65 @@ public class CountriesApiServiceIntegrationTest {
 
         String message = obj.get("message").getAsString();
         assertThat(message).isEqualTo("NGN to " + targetCurrency + " is not supported at this time");
+    }
+
+    @Test
+    void itShouldNotConvertCurrencyBecauseOfEmptyCountry() throws Exception {
+        // Given
+        String country = "";
+        double amount = 10.0;
+        String targetCurrency = "USD";
+
+        // When
+        // Then
+        ResultActions convertCurrencyActions = mockMvc.perform(
+                MockMvcRequestBuilders
+                        .get("/api/v1/convertCurrency?country="
+                                + country + "&amount=" + amount
+                                + "&targetCurrency=" + targetCurrency)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
+
+        // When
+        // Then
+        convertCurrencyActions.andExpect(status().isBadRequest());
+        MvcResult result = convertCurrencyActions.andReturn();
+        String resultString = result.getResponse().getContentAsString();
+
+        JsonObject obj = gson.fromJson(resultString, JsonObject.class);
+        assertThat(obj.has("message")).isTrue();
+
+        String message = obj.get("message").getAsString();
+        assertThat(message).isEqualTo("Missing country or target currency. Please provide");
+    }
+
+    @Test
+    void itShouldNotConvertCurrencyBecauseOfEmptyTargetCurrency() throws Exception {
+        // Given
+        String country = "Nigeria";
+        double amount = 10.0;
+        String targetCurrency = "";
+
+        // When
+        // Then
+        ResultActions convertCurrencyActions = mockMvc.perform(
+                MockMvcRequestBuilders
+                        .get("/api/v1/convertCurrency?country="
+                                + country + "&amount=" + amount
+                                + "&targetCurrency=" + targetCurrency)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
+
+        // When
+        // Then
+        convertCurrencyActions.andExpect(status().isBadRequest());
+        MvcResult result = convertCurrencyActions.andReturn();
+        String resultString = result.getResponse().getContentAsString();
+
+        JsonObject obj = gson.fromJson(resultString, JsonObject.class);
+        assertThat(obj.has("message")).isTrue();
+
+        String message = obj.get("message").getAsString();
+        assertThat(message).isEqualTo("Missing country or target currency. Please provide");
     }
 }

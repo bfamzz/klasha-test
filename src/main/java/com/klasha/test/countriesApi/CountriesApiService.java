@@ -65,6 +65,10 @@ public class CountriesApiService {
     }
 
     public Country getCountryData(String countryName) {
+        if (countryName.isEmpty()) {
+            throw new InvalidInputException("Provide a valid country name");
+        }
+
         String encodedCountry = URLEncoder.encode(countryName, StandardCharsets.UTF_8);
         Country country = Country.builder()
                 .name(encodedCountry)
@@ -123,6 +127,10 @@ public class CountriesApiService {
     }
 
     public CurrencyConversion convertCurrency(String country, double amount, String targetCurrency) {
+        if (country.isEmpty() || targetCurrency.isEmpty()) {
+            throw new InvalidInputException("Missing country or target currency. Please provide");
+        }
+
         if (amount <= 0.0) {
             throw new InvalidInputException("Amount must be greater than 0.0");
         }
