@@ -72,4 +72,3 @@ Query parameters:
 
 ## Recommendation
 * Caching - The results should be cached in an in-memory datastore (e.g. Redis) so that subsequent calls to the endpoint will result in faster response time.
-* 

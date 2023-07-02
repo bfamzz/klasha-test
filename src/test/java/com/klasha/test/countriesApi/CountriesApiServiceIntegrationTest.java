@@ -51,6 +51,32 @@ public class CountriesApiServiceIntegrationTest {
     }
 
     @Test
+    void itShouldNotGetTopCitiesBecauseOfInvalidLimit() throws Exception {
+        // Given
+        int limit = 0;
+
+        ResultActions getTopCitiesActions = mockMvc.perform(
+                MockMvcRequestBuilders
+                        .get("/api/v1/countryTopCities?number_of_cities="
+                                + limit)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
+
+        // When
+        // Then
+        getTopCitiesActions.andExpect(status().isBadRequest());
+        MvcResult result = getTopCitiesActions.andReturn();
+        String resultString = result.getResponse().getContentAsString();
+
+        JsonObject obj = gson.fromJson(resultString, JsonObject.class);
+        assertThat(obj.has("message")).isTrue();
+
+        assertThat(obj.get("message").getAsString())
+                .isEqualTo("Limit must be greater than 0");
+
+    }
+
+    @Test
     void itShouldGetCountryData() throws Exception {
         // Given
         String country = "Ghana";
@@ -72,6 +98,30 @@ public class CountriesApiServiceIntegrationTest {
 
         JsonObject dataObj = obj.getAsJsonObject("data");
         assertThat(dataObj.get("name").getAsString()).isEqualTo(country);
+    }
+
+    @Test
+    void itShouldNotGetCountryData() throws Exception {
+        // Given
+        String country = "Ghanaa";
+        ResultActions getCountryDataActions = mockMvc.perform(
+                MockMvcRequestBuilders
+                        .get("/api/v1/countryData?country="
+                                + country)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
+
+        // When
+        // Then
+        getCountryDataActions.andExpect(status().isNotFound());
+        MvcResult result = getCountryDataActions.andReturn();
+        String resultString = result.getResponse().getContentAsString();
+
+        JsonObject obj = gson.fromJson(resultString, JsonObject.class);
+        assertThat(obj.has("message")).isTrue();
+
+        assertThat(obj.get("message").getAsString())
+                .isEqualTo("Resource not found. Please try again");
     }
 
     @Test
@@ -98,6 +148,30 @@ public class CountriesApiServiceIntegrationTest {
         assertThat(dataObj.get("name").getAsString()).isEqualTo(country);
         assertThat(dataObj.getAsJsonArray("states")
                 .size()).isGreaterThan(0);
+    }
+
+    @Test
+    void itShouldNotGetCountryStateAndCities() throws Exception {
+        // Given
+        String country = "";
+        ResultActions getCountryStatesAndCities = mockMvc.perform(
+                MockMvcRequestBuilders
+                        .get("/api/v1/countryStatesAndCities?country="
+                                + country)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
+
+        // When
+        // Then
+        getCountryStatesAndCities.andExpect(status().isBadRequest());
+        MvcResult result = getCountryStatesAndCities.andReturn();
+        String resultString = result.getResponse().getContentAsString();
+
+        JsonObject obj = gson.fromJson(resultString, JsonObject.class);
+        assertThat(obj.has("message")).isTrue();
+
+        assertThat(obj.get("message").getAsString())
+                .isEqualTo("Provide a valid country name");
     }
 
     @Test

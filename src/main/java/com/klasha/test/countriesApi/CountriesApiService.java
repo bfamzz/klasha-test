@@ -15,7 +15,7 @@ import com.klasha.test.countriesApi.response.FilteredCitiesWithPopulation;
 import com.klasha.test.enums.CountryTask;
 import com.klasha.test.exception.types.CurrencyConversionNotSupported;
 import com.klasha.test.exception.types.InternalServerErrorException;
-import com.klasha.test.exception.types.InvalidAmountException;
+import com.klasha.test.exception.types.InvalidInputException;
 import com.klasha.test.exception.types.SameCurrencyNotSupportedException;
 import com.klasha.test.repository.CsvRatesRepository;
 import com.klasha.test.util.ApiClient;
@@ -50,8 +50,10 @@ public class CountriesApiService {
 
     private final Gson gson = new Gson();
 
-    public List<FilteredCitiesWithPopulation> getTopCities(int limit)
-    {
+    public List<FilteredCitiesWithPopulation> getTopCities(int limit) {
+        if (limit <= 0) {
+            throw new InvalidInputException("Limit must be greater than 0");
+        }
         String[] countries = {"Italy", "New Zealand", "Ghana"};
         return Arrays.stream(countries).map(c -> CompletableFuture.supplyAsync(() -> {
             try {
@@ -89,7 +91,11 @@ public class CountriesApiService {
     }
 
     public CountryStatesAndCities getCountryStatesAndCities(String country) {
-         String response = getCountryStates(country);
+        if (country.isEmpty()) {
+            throw new InvalidInputException("Provide a valid country name");
+        }
+
+        String response = getCountryStates(country);
 
         JsonObject obj = gson.fromJson(response, JsonObject.class);
         JsonObject data = obj.getAsJsonObject("data");
@@ -118,7 +124,7 @@ public class CountriesApiService {
 
     public CurrencyConversion convertCurrency(String country, double amount, String targetCurrency) {
         if (amount <= 0.0) {
-            throw new InvalidAmountException("Amount must be greater than 0.0");
+            throw new InvalidInputException("Amount must be greater than 0.0");
         }
         String fromCurrency = getCountryCurrency(country);
         if (fromCurrency.equalsIgnoreCase(targetCurrency)) {

@@ -2,7 +2,7 @@ package com.klasha.test.exception;
 
 import com.klasha.test.exception.types.CurrencyConversionNotSupported;
 import com.klasha.test.exception.types.InternalServerErrorException;
-import com.klasha.test.exception.types.InvalidAmountException;
+import com.klasha.test.exception.types.InvalidInputException;
 import com.klasha.test.exception.types.ResourceNotFoundException;
 import com.klasha.test.exception.types.SameCurrencyNotSupportedException;
 import org.springframework.http.HttpStatus;
@@ -42,8 +42,8 @@ public class ApiExceptionHandler {
         return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(value = InvalidAmountException.class)
-    public ResponseEntity<Object> handleApiRequestException(InvalidAmountException exception) {
+    @ExceptionHandler(value = InvalidInputException.class)
+    public ResponseEntity<Object> handleApiRequestException(InvalidInputException exception) {
         ApiException apiException = new ApiException(exception.getMessage(), exception,
                 ZonedDateTime.now());
         return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
